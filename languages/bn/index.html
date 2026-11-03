@@ -2238,17 +2238,9 @@ for (let i = 0; i < n; i++) {
           }
         });
 
-        // Click to move selected pointer directly
-        card.addEventListener('click', () => {
-          if (state.selectedPointer && state.pointers[state.selectedPointer]) {
-            const fromIdx = state.pointers[state.selectedPointer].index;
-            saveSnapshot(`Move pointer [${state.selectedPointer}] -> index ${idx}`);
-            state.pointers[state.selectedPointer].index = idx;
-            recordAction('pointer_move', { pointer: state.selectedPointer, from: fromIdx, to: idx }, `পয়েন্টার [${state.selectedPointer}] কে ক্লিক করে [${fromIdx}] থেকে [${idx}] এ নেওয়া হলো`);
-            renderBoard();
-            renderPointerTray();
-          }
-        });
+        // NOTE: a plain left click on a card must NOT move any pointer.
+        // Cards are manipulated via drag & drop, double-click (edit value), or the
+        // right-click context menu — never by accidental single-click relocation.
 
         // Double Click to Edit Value
         card.addEventListener('dblclick', () => {
@@ -3662,12 +3654,36 @@ for (let i = 0; i < n; i++) {
       }
 
       function clearDevToolsConsole() {
-        document.getElementById('consoleLogs').innerHTML = '<div class="console-line system" data-level="system"><span class="console-time">[00:00]</span><span>⚡ Console cleared.</span></div>';
+        const consoleLogs = document.getElementById('consoleLogs');
+        if (consoleLogs) {
+          // Remove ONLY the log lines. NEVER assign innerHTML here: the prompt line
+          // #consolePromptLine (which contains the #consoleInput) lives INSIDE #consoleLogs,
+          // so wiping innerHTML would destroy the console input and break typing/execution.
+          consoleLogs.querySelectorAll('.console-line').forEach(l => l.remove());
+          const promptLine = document.getElementById('consolePromptLine');
+          if (promptLine && promptLine.parentNode !== consoleLogs) {
+            consoleLogs.appendChild(promptLine); // re-anchor at the bottom if ever detached
+          }
+          const sys = document.createElement('div');
+          sys.className = 'console-line system';
+          sys.dataset.level = 'system';
+          sys.innerHTML = '<span class="console-time">[00:00]</span><span>⚡ Console cleared.</span>';
+          if (promptLine) consoleLogs.insertBefore(sys, promptLine);
+          else consoleLogs.appendChild(sys);
+          consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
         consoleEntryCount = 0;
         const badge = document.getElementById('consoleCount');
         if (badge) badge.innerText = 0;
         const mBadge = document.getElementById('mConsoleCount');
         if (mBadge) mBadge.innerText = 0;
+        // Keep the prompt usable: empty its text and keep it focused
+        const consoleInputEl = document.getElementById('consoleInput');
+        if (consoleInputEl) {
+          consoleInputEl.value = '';
+          consoleInputEl.focus();
+        }
+        filterConsoleLogs();
       }
 
       // Filter input & badges
