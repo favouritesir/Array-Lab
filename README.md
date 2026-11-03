@@ -104,16 +104,20 @@ xdg-open index.html
 
 | Shortcut | Action |
 | :--- | :--- |
+| `Alt + E` / `F2` | **Focus Code Editor** |
+| `Alt + C` / `F3` | **Focus Canvas / Playground Stage** |
+| `Alt + K` / `Ctrl + \`` | **Focus Console REPL Prompt** |
 | `Ctrl + Enter` / `F5` | Run Algorithm |
 | `Space` | Pause / Resume Execution |
-| `F10` / `Ctrl + .` | Step Forward (`⏭️`) |
-| `F9` / `Ctrl + ,` | Step Backward / Time-Travel (`⏮️`) |
-| `Ctrl + S` | Save Current Project (.json) |
-| `Ctrl + O` | Open / Import Project (.json) |
-| `Ctrl + Z` | Undo Last Manual Action |
-| `Ctrl + Y` | Redo Manual Action |
+| `Shift + F5` | Stop Execution |
+| `F10` / `Ctrl + .` / `]` | Step Forward (`⏭️`) |
+| `F9` / `Ctrl + ,` / `[` | Step Backward / Time-Travel (`⏮️`) |
+| `Enter` (inside modals) | Submit & Save Modal / Form |
+| `Escape` | Cancel & Close Any Modal or Context Menu |
 | `Arrow Left / Right` | Move Selected Pointer Left / Right |
 | `Delete` | Remove Selected Pointer |
+| `Ctrl + Z` / `Ctrl + Y` | Undo / Redo (Time Travel History) |
+| `Ctrl + S` / `Ctrl + O` | Save / Open Project Snapshot (.json) |
 
 ---
 

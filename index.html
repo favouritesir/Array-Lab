@@ -1141,6 +1141,149 @@
       outline: none;
       font-family: monospace;
     }
+
+    /* Mobile / Small Screen Drawer Tabs */
+    .mobile-drawer-tabs {
+      display: none;
+      background: #090e1a;
+      border-bottom: 1px solid var(--border);
+      padding: 4px 8px;
+      gap: 6px;
+      align-items: center;
+      width: 100%;
+      flex-shrink: 0;
+      box-sizing: border-box;
+    }
+    .m-tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+    .m-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .m-tab-btn.active {
+      color: var(--accent);
+      background: #1e293b;
+      border-color: var(--border);
+      font-weight: 700;
+    }
+    .m-tab-btn.active .tab-badge {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+    }
+
+    /* Responsive Breakpoints */
+    @media (max-width: 900px) {
+      .mobile-drawer-tabs {
+        display: flex;
+      }
+      .bottom-drawer {
+        flex-direction: column;
+        height: 380px;
+        min-height: 200px;
+      }
+      .resizer-v {
+        display: none !important;
+      }
+
+      /* Drawer tab states on small screens */
+      .bottom-drawer.tab-editor .ide-section {
+        display: flex !important;
+        width: 100% !important;
+        flex: 1;
+      }
+      .bottom-drawer.tab-editor .flow-section {
+        display: none !important;
+      }
+
+      .bottom-drawer.tab-timeline .ide-section,
+      .bottom-drawer.tab-console .ide-section {
+        display: none !important;
+      }
+
+      .bottom-drawer.tab-timeline .flow-section,
+      .bottom-drawer.tab-console .flow-section {
+        display: flex !important;
+        width: 100% !important;
+        flex: 1;
+      }
+
+      .bottom-drawer.tab-timeline .flow-tab-header,
+      .bottom-drawer.tab-console .flow-tab-header {
+        display: none !important;
+      }
+
+      /* Top Header & Toolbar responsive adjustments */
+      header {
+        padding: 6px 8px;
+        gap: 6px;
+      }
+      .brand {
+        font-size: 0.88rem;
+      }
+      .toolbar-grp {
+        gap: 4px;
+      }
+      .input-box {
+        padding: 3px 6px;
+      }
+      .input-box input {
+        width: 120px;
+        font-size: 0.78rem;
+      }
+      .flow-toolbar {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 5px 8px;
+      }
+      .speed-ctrl {
+        flex: 1;
+        min-width: 130px;
+      }
+      .pointer-banner {
+        flex-wrap: wrap;
+        padding: 5px 8px;
+      }
+      .modal-box {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 12px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .brand span {
+        font-size: 0.82rem;
+      }
+      .btn {
+        padding: 3px 6px;
+        font-size: 0.7rem;
+      }
+      .card-element {
+        width: 44px;
+        height: 46px;
+        font-size: 0.95rem;
+      }
+      .slot-cell {
+        min-width: 48px;
+      }
+      .bottom-drawer {
+        height: 340px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1201,7 +1344,7 @@
       </div>
 
       <!-- Zoom/Scrollable Board Viewport -->
-      <div class="board-viewport" id="boardViewport">
+      <div class="board-viewport" id="boardViewport" tabindex="0">
         <div class="array-track" id="arrayTrack">
           <!-- Dynamically Generated Slots -->
         </div>
@@ -1215,6 +1358,22 @@
     <!-- Bottom Split Section: IDE & Process Flow Map -->
     <div class="bottom-drawer" id="bottomDrawer">
       
+      <!-- Mobile / Responsive Unified Drawer Tab Bar -->
+      <div class="mobile-drawer-tabs" id="mobileDrawerTabs">
+        <button class="m-tab-btn active" id="mTabEditor">
+          <span>⚡ কোড এডিটর</span>
+        </button>
+        <button class="m-tab-btn" id="mTabTimeline">
+          <span>📜 হিস্ট্রি</span>
+          <span class="tab-badge" id="mTimelineCount">0</span>
+        </button>
+        <button class="m-tab-btn" id="mTabConsole">
+          <span>💻 কনসোল</span>
+          <span class="tab-badge" id="mConsoleCount">0</span>
+        </button>
+        <button class="btn" id="mBtnClearLogs" style="margin-left: auto; padding: 2px 7px; font-size: 0.7rem;" title="লগ ক্লিয়ার করুন">🧹</button>
+      </div>
+
       <!-- Left: Code Editor with Breakpoints & Full-Line Highlight -->
       <div class="ide-section" id="ideSection">
         <div class="ide-toolbar">
@@ -1364,43 +1523,63 @@ for (let i = 0; i < n; i++) {
 
   <!-- Modal for Keyboard Shortcuts Cheatsheet -->
   <div class="modal-overlay" id="shortcutsModal">
-    <div class="modal-box" style="width: 480px; max-width: 95vw;">
+    <div class="modal-box" style="width: 520px; max-width: 95vw;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
         <h4 style="color: var(--accent); font-size: 0.95rem; margin: 0;">⌨️ কিবোর্ড শর্টকাট গাইড (Keyboard Shortcuts)</h4>
         <button class="btn" id="btnCloseShortcutsModal" style="padding: 2px 6px; font-size: 0.75rem;">✕</button>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem; max-height: 380px; overflow-y: auto;">
-        <div style="color: #38bdf8; font-weight: 700; margin-top: 4px;">এডিটর শর্টকাটস:</div>
-        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.78rem; max-height: 400px; overflow-y: auto;">
+        
+        <div style="color: #e879f9; font-weight: 700; margin-top: 4px;">🎯 নেভিগেশন ও ফোকাস শর্টকাটস:</div>
+        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Alt + E / F2</kbd></div>
+          <div>কোড এডিটর ফোকাস (Focus Code Editor)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Alt + C / F3</kbd></div>
+          <div>ক্যানভাস / প্লেগ্রাউন্ড ফোকাস (Focus Canvas Stage)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Alt + K / Ctrl + `</kbd></div>
+          <div>কনসোল REPL ফোকাস (Focus Console REPL)</div>
+        </div>
+
+        <div style="color: #4ade80; font-weight: 700; margin-top: 4px;">🎮 অ্যালগরিদম ও এনিমেশন কন্ট্রোল:</div>
+        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Space / F5</kbd></div>
+          <div>রান / পজ টগল (Run / Pause)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">F10 / Ctrl + . / ]</kbd></div>
+          <div>এক স্টেপ সামনে এগোনো (Step Forward)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">F9 / Ctrl + , / [</kbd></div>
+          <div>টাইম-ট্রাভেল পিছনের স্টেপ (Step Back)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Shift + F5</kbd></div>
+          <div>এক্সিকিউশন বন্ধ করা (Stop)</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Arrow Left / Right</kbd></div>
+          <div>নির্বাচিত পয়েন্টার এক ঘর বামে/ডানে সরানো</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Delete</kbd></div>
+          <div>নির্বাচিত পয়েন্টার মুছে ফেলা</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + Z / Ctrl + Y</kbd></div>
+          <div>Undo / Redo (টাইম ট্রাভেল হিস্ট্রি)</div>
+        </div>
+
+        <div style="color: #facc15; font-weight: 700; margin-top: 4px;">📋 ফর্ম ও ডায়ালগ শর্টকাটস:</div>
+        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Enter</kbd></div>
+          <div>যেকোনো ফর্ম বা মডাল সাবমিট ও সংরক্ষণ</div>
+          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Escape</kbd></div>
+          <div>যেকোনো মডাল, ডায়ালগ বা কনটেক্সট মেনু বাতিল ও বন্ধ করা</div>
+        </div>
+
+        <div style="color: #38bdf8; font-weight: 700; margin-top: 4px;">⚡ কোড এডিটর শর্টকাটস:</div>
+        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
           <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + F</kbd></div>
           <div>খুঁজুন (Find - রেজেক্সের জন্য /pattern/ লিখুন)</div>
           <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + H</kbd></div>
-          <div>রিপ্লেস (Find & Replace - এক বা সবগুলো)</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Tab / Shift+Tab</kbd></div>
-          <div>ইনডেন্ট / ডি-ইনডেন্ট (Indent / Dedent)</div>
+          <div>রিপ্লেস (Find & Replace)</div>
           <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + /</kbd></div>
-          <div>কমেন্ট টগল (Toggle Line Comment)</div>
+          <div>কমেন্ট টগল (Toggle Comment)</div>
           <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Alt + Up / Down</kbd></div>
-          <div>লাইন উপরে / নিচে সরানো (Move Line Up/Down)</div>
+          <div>লাইন উপরে / নিচে সরানো (Move Line)</div>
           <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Shift + Alt + Up/Down</kbd></div>
-          <div>লাইন উপরে / নিচে ডুপ্লিকেট করা (Duplicate Line)</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + Click</kbd></div>
-          <div>মাল্টি-কার্সার এডিটিং (Multiple Cursors)</div>
+          <div>লাইন ডুপ্লিকেট করা (Duplicate Line)</div>
         </div>
 
-        <div style="color: #4ade80; font-weight: 700; margin-top: 4px;">ওয়ার্কবেঞ্চ ও এক্সিকিউশন শর্টকাটস:</div>
-        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 6px; background: #080d1a; padding: 6px 10px; border-radius: 6px;">
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Space</kbd></div>
-          <div>রান / পজ টগল (Run / Pause)</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Right Arrow (▶)</kbd></div>
-          <div>পরের স্টেপ / পয়েন্টার ডানে সরানো</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Left Arrow (◀)</kbd></div>
-          <div>টাইম-ট্রাভেল পূর্বের স্টেপ / পয়েন্টার বামে সরানো</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Ctrl + Z / Ctrl + Y</kbd></div>
-          <div>Undo / Redo (টাইম ট্রাভেল)</div>
-          <div><kbd style="background:#1e293b; padding:1px 5px; border-radius:3px;">Escape</kbd></div>
-          <div>যেকোনো মডাল বা মেনু বন্ধ করা</div>
-        </div>
       </div>
     </div>
   </div>
@@ -1549,6 +1728,9 @@ for (let i = 0; i < n; i++) {
       }
     };
 
+    // Shared Context Target Index for Custom Right-Click Menu
+    let contextTargetIndex = null;
+
     // DOM Elements
     const arrayTrack = document.getElementById('arrayTrack');
     const pointerTray = document.getElementById('pointerTray');
@@ -1636,6 +1818,8 @@ for (let i = 0; i < n; i++) {
       timelineEntryCount++;
       const badge = document.getElementById('timelineCount');
       if (badge) badge.innerText = timelineEntryCount;
+      const mBadge = document.getElementById('mTimelineCount');
+      if (mBadge) mBadge.innerText = timelineEntryCount;
 
       const card = document.createElement('div');
       card.className = `flow-step-card ${type}-step`;
@@ -1849,6 +2033,8 @@ for (let i = 0; i < n; i++) {
       consoleEntryCount++;
       const badge = document.getElementById('consoleCount');
       if (badge) badge.innerText = consoleEntryCount;
+      const mBadge = document.getElementById('mConsoleCount');
+      if (mBadge) mBadge.innerText = consoleEntryCount;
 
       const consoleLogs = document.getElementById('consoleLogs');
       if (!consoleLogs) return;
@@ -2036,18 +2222,25 @@ for (let i = 0; i < n; i++) {
           }
         });
 
-        // Custom Context Menu on Card
-        card.addEventListener('contextmenu', (e) => {
+        // Custom Context Menu on Card & Slot
+        const openCustomContextMenu = (e) => {
           e.preventDefault();
           e.stopPropagation();
           contextTargetIndex = idx;
           const contextMenu = document.getElementById('customContextMenu');
           if (contextMenu) {
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.style.top = `${e.clientY}px`;
             contextMenu.style.display = 'block';
+            const mWidth = contextMenu.offsetWidth || 190;
+            const mHeight = contextMenu.offsetHeight || 160;
+            const posX = Math.min(window.innerWidth - mWidth - 10, Math.max(10, e.clientX));
+            const posY = Math.min(window.innerHeight - mHeight - 10, Math.max(10, e.clientY));
+            contextMenu.style.left = `${posX}px`;
+            contextMenu.style.top = `${posY}px`;
           }
-        });
+        };
+
+        card.addEventListener('contextmenu', openCustomContextMenu);
+        slot.addEventListener('contextmenu', openCustomContextMenu);
 
         slot.appendChild(card);
 
@@ -3365,6 +3558,56 @@ for (let i = 0; i < n; i++) {
       const consolePane = document.getElementById('consolePane');
       const btnClearLogs = document.getElementById('btnClearLogs');
 
+      // Mobile / Tablet Drawer Tab Switching Logic
+      const mTabEditor = document.getElementById('mTabEditor');
+      const mTabTimeline = document.getElementById('mTabTimeline');
+      const mTabConsole = document.getElementById('mTabConsole');
+      const mBtnClearLogs = document.getElementById('mBtnClearLogs');
+
+      function activateDrawerTab(tabName) {
+        bottomDrawer.classList.remove('tab-editor', 'tab-timeline', 'tab-console');
+        bottomDrawer.classList.add(`tab-${tabName}`);
+
+        [mTabEditor, mTabTimeline, mTabConsole].forEach(b => b?.classList.remove('active'));
+
+        if (tabName === 'editor') {
+          if (mTabEditor) mTabEditor.classList.add('active');
+          if (editorInstance) {
+            setTimeout(() => editorInstance.refresh(), 50);
+          }
+        } else if (tabName === 'timeline') {
+          if (mTabTimeline) mTabTimeline.classList.add('active');
+          tabBtnTimeline?.classList.add('active');
+          tabBtnConsole?.classList.remove('active');
+          flowTimelinePane.style.display = 'flex';
+          consolePane.style.display = 'none';
+        } else if (tabName === 'console') {
+          if (mTabConsole) mTabConsole.classList.add('active');
+          tabBtnConsole?.classList.add('active');
+          tabBtnTimeline?.classList.remove('active');
+          flowTimelinePane.style.display = 'none';
+          consolePane.style.display = 'flex';
+          setTimeout(() => consoleInput?.focus(), 60);
+        }
+      }
+
+      if (mTabEditor) mTabEditor.addEventListener('click', () => activateDrawerTab('editor'));
+      if (mTabTimeline) mTabTimeline.addEventListener('click', () => activateDrawerTab('timeline'));
+      if (mTabConsole) mTabConsole.addEventListener('click', () => activateDrawerTab('console'));
+      if (mBtnClearLogs) mBtnClearLogs.addEventListener('click', () => btnClearLogs?.click());
+
+      if (window.innerWidth <= 900) {
+        activateDrawerTab('editor');
+      }
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) {
+          bottomDrawer.classList.remove('tab-editor', 'tab-timeline', 'tab-console');
+        } else if (!bottomDrawer.classList.contains('tab-editor') && !bottomDrawer.classList.contains('tab-timeline') && !bottomDrawer.classList.contains('tab-console')) {
+          activateDrawerTab('editor');
+        }
+      });
+
       if (tabBtnTimeline && tabBtnConsole) {
         tabBtnTimeline.addEventListener('click', () => {
           tabBtnTimeline.classList.add('active');
@@ -3386,6 +3629,8 @@ for (let i = 0; i < n; i++) {
         consoleEntryCount = 0;
         const badge = document.getElementById('consoleCount');
         if (badge) badge.innerText = 0;
+        const mBadge = document.getElementById('mConsoleCount');
+        if (mBadge) mBadge.innerText = 0;
       }
 
       // Filter input & badges
@@ -3414,6 +3659,8 @@ for (let i = 0; i < n; i++) {
             timelineEntryCount = 0;
             const badge = document.getElementById('timelineCount');
             if (badge) badge.innerText = 0;
+            const mBadge = document.getElementById('mTimelineCount');
+            if (mBadge) mBadge.innerText = 0;
           }
         });
       }
@@ -3588,11 +3835,30 @@ for (let i = 0; i < n; i++) {
 
       // Custom Context Menu for Canvas Stage & Cards
       const contextMenu = document.getElementById('customContextMenu');
-      let contextTargetIndex = null;
 
       // Close context menu on any global click or escape
       window.addEventListener('click', () => {
         if (contextMenu) contextMenu.style.display = 'none';
+      });
+
+      // Strict Rule: Suppress browser's default context menu on 100% of the workbench!
+      window.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        const slot = e.target.closest('.slot-cell');
+        if (slot) {
+          contextTargetIndex = parseInt(slot.dataset.index, 10);
+          if (contextMenu) {
+            contextMenu.style.display = 'block';
+            const mWidth = contextMenu.offsetWidth || 190;
+            const mHeight = contextMenu.offsetHeight || 160;
+            const posX = Math.min(window.innerWidth - mWidth - 10, Math.max(10, e.clientX));
+            const posY = Math.min(window.innerHeight - mHeight - 10, Math.max(10, e.clientY));
+            contextMenu.style.left = `${posX}px`;
+            contextMenu.style.top = `${posY}px`;
+          }
+        } else {
+          if (contextMenu) contextMenu.style.display = 'none';
+        }
       });
 
       // Context menu action bindings
@@ -3614,10 +3880,16 @@ for (let i = 0; i < n; i++) {
       });
 
       document.getElementById('ctxMoveSelectedHere').addEventListener('click', () => {
-        if (contextTargetIndex !== null && state.selectedPointer && state.pointers[state.selectedPointer]) {
-          state.pointers[state.selectedPointer].index = contextTargetIndex;
+        const pKey = state.selectedPointer && state.pointers[state.selectedPointer] ? state.selectedPointer : Object.keys(state.pointers)[0];
+        if (contextTargetIndex !== null && pKey && state.pointers[pKey]) {
+          const fromIdx = state.pointers[pKey].index;
+          state.selectedPointer = pKey;
+          state.pointers[pKey].index = contextTargetIndex;
+          saveSnapshot(`Move pointer [${pKey}] -> index ${contextTargetIndex}`);
+          recordAction('pointer_move', { pointer: pKey, from: fromIdx, to: contextTargetIndex }, `পয়েন্টার [${pKey}] কে [${fromIdx}] থেকে [${contextTargetIndex}] এ সরানো হলো`);
           renderBoard();
           renderPointerTray();
+          logStep(`👉 পয়েন্টার [${state.pointers[pKey].varName || pKey}] কে ইনডেক্স [${contextTargetIndex}] এ নেওয়া হলো`);
         }
       });
 
@@ -3664,25 +3936,145 @@ for (let i = 0; i < n; i++) {
         }
       });
 
-      // Keyboard Controls (Arrow Left/Right to move selected pointer, Space to toggle run/pause, Esc to close modals)
+      // Form Modal Keyboard Support: Enter submits, Escape cancels & closes
+      // 1. Pointer Modal
+      ['modalPtrName', 'modalPtrIdx'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp) {
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              document.getElementById('btnConfirmModal')?.click();
+            } else if (e.key === 'Escape') {
+              document.getElementById('btnCancelModal')?.click();
+            }
+          });
+        }
+      });
+
+      // 2. Array Creator Modal
+      ['creatorTotalSize', 'creatorNumBlocks', 'creatorMinVal', 'creatorMaxVal', 'creatorRangePattern'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (inp) {
+          inp.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              document.getElementById('btnApplyCreatedArray')?.click();
+            } else if (e.key === 'Escape') {
+              document.getElementById('btnCancelCreatorModal')?.click();
+            }
+          });
+        }
+      });
+
+      // 3. Top Array Input Box
+      const arrayInput = document.getElementById('arrayInput');
+      if (arrayInput) {
+        arrayInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('btnLoadArray')?.click();
+          }
+        });
+      }
+
+      // Comprehensive Global Keyboard Controls & Focus Shortcuts
       window.addEventListener('keydown', (e) => {
+        // Universal Escape: Closes all modals, context menus, and active overlays
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+          if (contextMenu) contextMenu.style.display = 'none';
+          return;
+        }
+
+        // Global Navigation & Focus Shortcuts (works even if inside inputs when modifiers are pressed)
+        // 1. Focus Code Editor: Alt + E or F2
+        if ((e.altKey && e.key.toLowerCase() === 'e') || e.key === 'F2') {
+          e.preventDefault();
+          if (window.innerWidth <= 900) activateDrawerTab('editor');
+          if (editorInstance) editorInstance.focus();
+          else codeEditor.focus();
+          return;
+        }
+
+        // 2. Focus Canvas / Playground: Alt + C or F3
+        if ((e.altKey && e.key.toLowerCase() === 'c') || e.key === 'F3') {
+          e.preventDefault();
+          const boardViewport = document.getElementById('boardViewport');
+          if (boardViewport) boardViewport.focus();
+          return;
+        }
+
+        // 3. Focus Console REPL: Alt + K or Ctrl + ` (backtick)
+        if ((e.altKey && e.key.toLowerCase() === 'k') || (e.ctrlKey && e.key === '`')) {
+          e.preventDefault();
+          if (window.innerWidth <= 900) {
+            activateDrawerTab('console');
+          } else {
+            tabBtnConsole?.click();
+          }
+          const consoleInput = document.getElementById('consoleInput');
+          if (consoleInput) consoleInput.focus();
+          return;
+        }
+
+        // Execution & Animation Shortcuts
+        // Run: Ctrl + Enter or F5
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('btnRun')?.click();
+          return;
+        }
+        if (e.key === 'F5' && !e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('btnRun')?.click();
+          return;
+        }
+
+        // Stop: Shift + F5
+        if (e.key === 'F5' && e.shiftKey) {
+          e.preventDefault();
+          document.getElementById('btnStop')?.click();
+          return;
+        }
+
+        // Step Forward: F10 or Ctrl + . or ']' (outside text editing)
+        if (e.key === 'F10' || ((e.ctrlKey || e.metaKey) && e.key === '.')) {
+          e.preventDefault();
+          document.getElementById('btnStep')?.click();
+          return;
+        }
+
+        // Step Backward (Time Travel): F9 or Ctrl + , or '[' (outside text editing)
+        if (e.key === 'F9' || ((e.ctrlKey || e.metaKey) && e.key === ',')) {
+          e.preventDefault();
+          document.getElementById('btnStepBack')?.click();
+          return;
+        }
+
+        // If currently typing in an input or CodeMirror editor, ignore single-key playground shortcuts
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('.CodeMirror')) return;
 
+        // Space: Toggle Run / Pause
         if (e.key === ' ' || e.code === 'Space') {
           e.preventDefault();
           if (state.isRunning && !state.isPaused) {
-            document.getElementById('btnPause').click();
+            document.getElementById('btnPause')?.click();
           } else {
-            document.getElementById('btnRun').click();
+            document.getElementById('btnRun')?.click();
           }
-        } else if (e.key === 'Escape') {
-          document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-          const contextMenu = document.getElementById('customContextMenu');
-          if (contextMenu) contextMenu.style.display = 'none';
+        } else if (e.key === ']') {
+          e.preventDefault();
+          document.getElementById('btnStep')?.click();
+        } else if (e.key === '[') {
+          e.preventDefault();
+          document.getElementById('btnStepBack')?.click();
         } else if (e.key === 'ArrowRight' && state.selectedPointer) {
           movePointerRelative(state.selectedPointer, 1);
         } else if (e.key === 'ArrowLeft' && state.selectedPointer) {
           movePointerRelative(state.selectedPointer, -1);
+        } else if (e.key === 'Delete' && state.selectedPointer) {
+          deletePointer(state.selectedPointer);
         } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
           e.preventDefault(); undo();
         } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
