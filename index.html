@@ -62,6 +62,7 @@
       gap: 8px;
       z-index: 50;
       flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
     .brand {
@@ -181,7 +182,7 @@
       display: flex;
       flex-direction: column;
       flex: 1;
-      height: calc(100vh - 50px);
+      min-height: 0; /* let it shrink inside the 100vh body flex column (header height varies) */
       position: relative;
       overflow: hidden;
     }
@@ -189,6 +190,7 @@
     /* Upper Stage: Array Canvas */
     .canvas-stage {
       flex: 1;
+      min-height: 0; /* never let the canvas collapse to 0 / overflow the workspace */
       display: flex;
       flex-direction: column;
       position: relative;
@@ -288,7 +290,8 @@
     /* Array Viewport (Flex-start prevents truncation on zoom) */
     .board-viewport {
       flex: 1;
-      overflow-x: auto;
+      min-height: 0;
+      overflow-x: auto; /* horizontal scroll on narrow screens, never breaks page bounds */
       overflow-y: hidden;
       display: flex;
       align-items: center;
@@ -541,6 +544,7 @@
     .bottom-drawer {
       height: 310px;
       min-height: 120px;
+      flex-shrink: 0;
       background: var(--bg-surface);
       display: flex;
       z-index: 30;
@@ -1190,11 +1194,21 @@
       }
       .bottom-drawer {
         flex-direction: column;
-        height: 380px;
-        min-height: 200px;
+        /* viewport-relative cap so the canvas above never collapses on short screens */
+        height: min(380px, 48vh);
+        min-height: 150px;
       }
       .resizer-v {
         display: none !important;
+      }
+      .canvas-stage {
+        min-height: 0;
+      }
+      .board-viewport {
+        padding: 46px 16px;
+      }
+      .array-track {
+        padding: 100px 16px 20px 16px;
       }
 
       /* Drawer tab states on small screens */
@@ -1281,7 +1295,7 @@
         min-width: 48px;
       }
       .bottom-drawer {
-        height: 340px;
+        height: min(340px, 45vh);
       }
     }
   </style>
@@ -1740,6 +1754,32 @@ for (let i = 0; i < n; i++) {
     const flowTimeline = document.getElementById('flowTimeline');
     const canvasStage = document.getElementById('canvasStage');
     const speedSlider = document.getElementById('speedSlider');
+    // NOTE: bottomDrawer is declared HERE (not late inside the init block) so that
+    // activateDrawerTab() can safely use it at any viewport width without hitting a
+    // temporal-dead-zone ReferenceError that would abort the rest of the init script.
+    const bottomDrawer = document.getElementById('bottomDrawer');
+    const contextMenuEl = document.getElementById('customContextMenu');
+
+    /** Close the custom right-click context menu (if open). */
+    function closeContextMenu() {
+      if (contextMenuEl) contextMenuEl.style.display = 'none';
+    }
+
+    /**
+     * Show the custom context menu at (x, y) for the given slot index,
+     * clamped so the menu never clips off-screen.
+     */
+    function showContextMenu(x, y, idx) {
+      contextTargetIndex = (typeof idx === 'number' && !isNaN(idx)) ? idx : null;
+      if (!contextMenuEl) return;
+      contextMenuEl.style.display = 'block';
+      const mWidth = contextMenuEl.offsetWidth || 200;
+      const mHeight = contextMenuEl.offsetHeight || 170;
+      const posX = Math.min(window.innerWidth - mWidth - 8, Math.max(8, x));
+      const posY = Math.min(window.innerHeight - mHeight - 8, Math.max(8, y));
+      contextMenuEl.style.left = `${posX}px`;
+      contextMenuEl.style.top = `${posY}px`;
+    }
 
     function saveSnapshot(desc) {
       state.history.push({
@@ -2222,21 +2262,11 @@ for (let i = 0; i < n; i++) {
           }
         });
 
-        // Custom Context Menu on Card & Slot
+        // Custom Context Menu on Card & Slot (shared, off-screen-clamped positioning)
         const openCustomContextMenu = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          contextTargetIndex = idx;
-          const contextMenu = document.getElementById('customContextMenu');
-          if (contextMenu) {
-            contextMenu.style.display = 'block';
-            const mWidth = contextMenu.offsetWidth || 190;
-            const mHeight = contextMenu.offsetHeight || 160;
-            const posX = Math.min(window.innerWidth - mWidth - 10, Math.max(10, e.clientX));
-            const posY = Math.min(window.innerHeight - mHeight - 10, Math.max(10, e.clientY));
-            contextMenu.style.left = `${posX}px`;
-            contextMenu.style.top = `${posY}px`;
-          }
+          showContextMenu(e.clientX, e.clientY, idx);
         };
 
         card.addEventListener('contextmenu', openCustomContextMenu);
@@ -2390,6 +2420,7 @@ for (let i = 0; i < n; i++) {
         state.selectedPointer = Object.keys(state.pointers)[0] || null;
       }
       renderBoard();
+      renderPointerTray();
     }
 
     /**
@@ -3572,8 +3603,11 @@ for (let i = 0; i < n; i++) {
 
         if (tabName === 'editor') {
           if (mTabEditor) mTabEditor.classList.add('active');
+          // CodeMirror must refresh once the editor pane becomes visible again,
+          // otherwise it renders with zero size / stale layout on small screens.
           if (editorInstance) {
-            setTimeout(() => editorInstance.refresh(), 50);
+            editorInstance.refresh();
+            setTimeout(() => editorInstance.refresh(), 60);
           }
         } else if (tabName === 'timeline') {
           if (mTabTimeline) mTabTimeline.classList.add('active');
@@ -3601,11 +3635,14 @@ for (let i = 0; i < n; i++) {
       }
 
       window.addEventListener('resize', () => {
+        closeContextMenu();
         if (window.innerWidth > 900) {
           bottomDrawer.classList.remove('tab-editor', 'tab-timeline', 'tab-console');
         } else if (!bottomDrawer.classList.contains('tab-editor') && !bottomDrawer.classList.contains('tab-timeline') && !bottomDrawer.classList.contains('tab-console')) {
           activateDrawerTab('editor');
         }
+        // Keep CodeMirror correctly sized after any viewport change
+        if (editorInstance) setTimeout(() => editorInstance.refresh(), 60);
       });
 
       if (tabBtnTimeline && tabBtnConsole) {
@@ -3834,35 +3871,26 @@ for (let i = 0; i < n; i++) {
       }
 
       // Custom Context Menu for Canvas Stage & Cards
-      const contextMenu = document.getElementById('customContextMenu');
+      const contextMenu = contextMenuEl || document.getElementById('customContextMenu');
 
-      // Close context menu on any global click or escape
-      window.addEventListener('click', () => {
-        if (contextMenu) contextMenu.style.display = 'none';
-      });
+      // Close context menu on any global click (menu item handlers run first, then this hides it)
+      window.addEventListener('click', () => closeContextMenu());
 
-      // Strict Rule: Suppress browser's default context menu on 100% of the workbench!
+      // Strict Rule: Suppress the browser's default right-click menu on 100% of the app.
+      // Right-clicking a slot/card opens our custom menu; anywhere else just closes it.
       window.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        const slot = e.target.closest('.slot-cell');
+        const slot = e.target && e.target.closest ? e.target.closest('.slot-cell') : null;
         if (slot) {
-          contextTargetIndex = parseInt(slot.dataset.index, 10);
-          if (contextMenu) {
-            contextMenu.style.display = 'block';
-            const mWidth = contextMenu.offsetWidth || 190;
-            const mHeight = contextMenu.offsetHeight || 160;
-            const posX = Math.min(window.innerWidth - mWidth - 10, Math.max(10, e.clientX));
-            const posY = Math.min(window.innerHeight - mHeight - 10, Math.max(10, e.clientY));
-            contextMenu.style.left = `${posX}px`;
-            contextMenu.style.top = `${posY}px`;
-          }
+          showContextMenu(e.clientX, e.clientY, parseInt(slot.dataset.index, 10));
         } else {
-          if (contextMenu) contextMenu.style.display = 'none';
+          closeContextMenu();
         }
       });
 
-      // Context menu action bindings
+      // Context menu action bindings (every action closes the menu explicitly)
       document.getElementById('ctxAddPointer').addEventListener('click', () => {
+        closeContextMenu();
         if (contextTargetIndex !== null) {
           openPointerEditModal();
           document.getElementById('modalPtrIdx').value = contextTargetIndex;
@@ -3870,6 +3898,7 @@ for (let i = 0; i < n; i++) {
       });
 
       document.getElementById('ctxEditValue').addEventListener('click', () => {
+        closeContextMenu();
         if (contextTargetIndex !== null) {
           const card = document.getElementById(`card-${contextTargetIndex}`);
           if (card) {
@@ -3880,20 +3909,27 @@ for (let i = 0; i < n; i++) {
       });
 
       document.getElementById('ctxMoveSelectedHere').addEventListener('click', () => {
-        const pKey = state.selectedPointer && state.pointers[state.selectedPointer] ? state.selectedPointer : Object.keys(state.pointers)[0];
+        closeContextMenu();
+        // Use the selected pointer, falling back to the first pointer when none is selected
+        const pKey = (state.selectedPointer && state.pointers[state.selectedPointer])
+          ? state.selectedPointer
+          : Object.keys(state.pointers)[0];
         if (contextTargetIndex !== null && pKey && state.pointers[pKey]) {
           const fromIdx = state.pointers[pKey].index;
+          const toIdx = Math.max(0, Math.min(state.arr.length - 1, contextTargetIndex));
           state.selectedPointer = pKey;
-          state.pointers[pKey].index = contextTargetIndex;
-          saveSnapshot(`Move pointer [${pKey}] -> index ${contextTargetIndex}`);
-          recordAction('pointer_move', { pointer: pKey, from: fromIdx, to: contextTargetIndex }, `পয়েন্টার [${pKey}] কে [${fromIdx}] থেকে [${contextTargetIndex}] এ সরানো হলো`);
+          state.pointers[pKey].index = toIdx;
+          saveSnapshot(`Move pointer [${pKey}] -> index ${toIdx}`);
+          recordAction('pointer_move', { pointer: pKey, from: fromIdx, to: toIdx }, `পয়েন্টার [${pKey}] কে [${fromIdx}] থেকে [${toIdx}] এ সরানো হলো`);
           renderBoard();
           renderPointerTray();
-          logStep(`👉 পয়েন্টার [${state.pointers[pKey].varName || pKey}] কে ইনডেক্স [${contextTargetIndex}] এ নেওয়া হলো`);
+          logStep(`👉 পয়েন্টার [${state.pointers[pKey].varName || pKey}] কে ইনডেক্স [${toIdx}] এ নেওয়া হলো`);
         }
       });
 
       document.getElementById('ctxResetPointers').addEventListener('click', () => {
+        closeContextMenu();
+        saveSnapshot('Reset all pointers to index 0');
         Object.keys(state.pointers).forEach(p => {
           state.pointers[p].index = 0;
         });
@@ -3936,149 +3972,162 @@ for (let i = 0; i < n; i++) {
         }
       });
 
-      // Form Modal Keyboard Support: Enter submits, Escape cancels & closes
-      // 1. Pointer Modal
-      ['modalPtrName', 'modalPtrIdx'].forEach(id => {
-        const inp = document.getElementById(id);
-        if (inp) {
-          inp.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              document.getElementById('btnConfirmModal')?.click();
-            } else if (e.key === 'Escape') {
-              document.getElementById('btnCancelModal')?.click();
-            }
-          });
-        }
-      });
+      // Form Modal Keyboard Support: Enter submits, Escape cancels & closes.
+      // Bound at the MODAL level so it works from ANY field inside the dialog
+      // (text inputs, number inputs, selects, checkboxes) — not just the ones we remember to list.
+      function bindModalKeys(modalEl, submitBtnId, cancelBtnId) {
+        if (!modalEl) return;
+        modalEl.addEventListener('keydown', (e) => {
+          const t = e.target;
+          if (!t || !t.tagName) return;
+          const tag = t.tagName;
+          const isField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable;
+          if (e.key === 'Enter' && isField && !e.shiftKey) {
+            // Let checkboxes/radios toggle natively and buttons receive their native Enter-click
+            if (tag === 'INPUT' && (t.type === 'checkbox' || t.type === 'radio')) return;
+            if (tag === 'BUTTON') return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (submitBtnId) document.getElementById(submitBtnId)?.click();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (cancelBtnId) document.getElementById(cancelBtnId)?.click();
+            else modalEl.style.display = 'none';
+          }
+        });
+      }
+      bindModalKeys(document.getElementById('ptrModal'), 'btnConfirmModal', 'btnCancelModal');
+      bindModalKeys(document.getElementById('arrayCreatorModal'), 'btnApplyCreatedArray', 'btnCancelCreatorModal');
+      bindModalKeys(document.getElementById('shortcutsModal'), null, 'btnCloseShortcutsModal');
 
-      // 2. Array Creator Modal
-      ['creatorTotalSize', 'creatorNumBlocks', 'creatorMinVal', 'creatorMaxVal', 'creatorRangePattern'].forEach(id => {
-        const inp = document.getElementById(id);
-        if (inp) {
-          inp.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              document.getElementById('btnApplyCreatedArray')?.click();
-            } else if (e.key === 'Escape') {
-              document.getElementById('btnCancelCreatorModal')?.click();
-            }
-          });
-        }
-      });
-
-      // 3. Top Array Input Box
+      // Top Array Input Box: Enter loads the array immediately
       const arrayInput = document.getElementById('arrayInput');
       if (arrayInput) {
         arrayInput.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
+            e.stopPropagation();
             document.getElementById('btnLoadArray')?.click();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            arrayInput.blur();
           }
         });
       }
 
+      // Run/Pause toggle helper: Space and F5 both use this
+      function toggleRunPause() {
+        if (state.isRunning && !state.isPaused) {
+          document.getElementById('btnPause')?.click();
+        } else {
+          document.getElementById('btnRun')?.click();
+        }
+      }
+
       // Comprehensive Global Keyboard Controls & Focus Shortcuts
       window.addEventListener('keydown', (e) => {
-        // Universal Escape: Closes all modals, context menus, and active overlays
+        const t = e.target;
+        const tag = t && t.tagName ? t.tagName : '';
+        const inPlainField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable);
+        const inCodeMirror = !!(t && t.closest && t.closest('.CodeMirror'));
+        const inTextField = inPlainField || inCodeMirror;
+        const mod = e.ctrlKey || e.metaKey;
+
+        // Universal Escape: closes any open modal, the custom context menu, and overlays
         if (e.key === 'Escape') {
-          document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-          if (contextMenu) contextMenu.style.display = 'none';
+          closeContextMenu();
+          document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
+          e.preventDefault();
           return;
         }
 
-        // Global Navigation & Focus Shortcuts (works even if inside inputs when modifiers are pressed)
+        // ---- Focus shortcuts: work reliably even while focus is inside a field ----
         // 1. Focus Code Editor: Alt + E or F2
-        if ((e.altKey && e.key.toLowerCase() === 'e') || e.key === 'F2') {
+        if ((e.altKey && !mod && e.key.toLowerCase() === 'e') || e.key === 'F2') {
           e.preventDefault();
           if (window.innerWidth <= 900) activateDrawerTab('editor');
           if (editorInstance) editorInstance.focus();
           else codeEditor.focus();
           return;
         }
-
         // 2. Focus Canvas / Playground: Alt + C or F3
-        if ((e.altKey && e.key.toLowerCase() === 'c') || e.key === 'F3') {
+        if ((e.altKey && !mod && e.key.toLowerCase() === 'c') || e.key === 'F3') {
           e.preventDefault();
-          const boardViewport = document.getElementById('boardViewport');
-          if (boardViewport) boardViewport.focus();
+          document.getElementById('boardViewport')?.focus();
+          return;
+        }
+        // 3. Focus Console REPL: Alt + K or Ctrl/Cmd + ` (backtick)
+        if ((e.altKey && !mod && e.key.toLowerCase() === 'k') || (mod && e.key === '`')) {
+          e.preventDefault();
+          if (window.innerWidth <= 900) activateDrawerTab('console');
+          else tabBtnConsole?.click();
+          document.getElementById('consoleInput')?.focus();
           return;
         }
 
-        // 3. Focus Console REPL: Alt + K or Ctrl + ` (backtick)
-        if ((e.altKey && e.key.toLowerCase() === 'k') || (e.ctrlKey && e.key === '`')) {
-          e.preventDefault();
-          if (window.innerWidth <= 900) {
-            activateDrawerTab('console');
-          } else {
-            tabBtnConsole?.click();
-          }
-          const consoleInput = document.getElementById('consoleInput');
-          if (consoleInput) consoleInput.focus();
-          return;
-        }
-
-        // Execution & Animation Shortcuts
-        // Run: Ctrl + Enter or F5
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-          e.preventDefault();
-          document.getElementById('btnRun')?.click();
-          return;
-        }
-        if (e.key === 'F5' && !e.shiftKey) {
+        // Run from the code editor: Ctrl/Cmd + Enter (allowed in CodeMirror, not in plain fields)
+        if (mod && e.key === 'Enter' && !inPlainField) {
           e.preventDefault();
           document.getElementById('btnRun')?.click();
           return;
         }
 
+        // While typing inside an input/select/textarea/CodeMirror, leave keys to the field
+        // (native typing, native undo/redo, CodeMirror editing) — no playground shortcuts.
+        if (inTextField) return;
+
+        // Focused buttons keep their native Space/Enter activation
+        if (tag === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
+
+        // ---- Execution & Animation shortcuts ----
+        // Run/Pause toggle: Space or F5
+        if (e.key === ' ' || e.code === 'Space' || (e.key === 'F5' && !e.shiftKey)) {
+          e.preventDefault();
+          toggleRunPause();
+          return;
+        }
         // Stop: Shift + F5
         if (e.key === 'F5' && e.shiftKey) {
           e.preventDefault();
           document.getElementById('btnStop')?.click();
           return;
         }
-
-        // Step Forward: F10 or Ctrl + . or ']' (outside text editing)
-        if (e.key === 'F10' || ((e.ctrlKey || e.metaKey) && e.key === '.')) {
+        // Step Forward: F10, Ctrl/Cmd + . or ']'
+        if (e.key === 'F10' || (mod && e.key === '.') || e.key === ']') {
           e.preventDefault();
           document.getElementById('btnStep')?.click();
           return;
         }
-
-        // Step Backward (Time Travel): F9 or Ctrl + , or '[' (outside text editing)
-        if (e.key === 'F9' || ((e.ctrlKey || e.metaKey) && e.key === ',')) {
+        // Step Backward (Time Travel): F9, Ctrl/Cmd + , or '['
+        if (e.key === 'F9' || (mod && e.key === ',') || e.key === '[') {
           e.preventDefault();
           document.getElementById('btnStepBack')?.click();
           return;
         }
-
-        // If currently typing in an input or CodeMirror editor, ignore single-key playground shortcuts
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.closest('.CodeMirror')) return;
-
-        // Space: Toggle Run / Pause
-        if (e.key === ' ' || e.code === 'Space') {
+        // Undo / Redo (app-level history; text-field undo stays native above)
+        if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
           e.preventDefault();
-          if (state.isRunning && !state.isPaused) {
-            document.getElementById('btnPause')?.click();
-          } else {
-            document.getElementById('btnRun')?.click();
+          undo();
+          return;
+        }
+        if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+          e.preventDefault();
+          redo();
+          return;
+        }
+        // Pointer nudge & delete (plain keys, no modifiers)
+        if (!e.altKey && !mod) {
+          if (e.key === 'ArrowRight' && state.selectedPointer) {
+            e.preventDefault();
+            movePointerRelative(state.selectedPointer, 1);
+          } else if (e.key === 'ArrowLeft' && state.selectedPointer) {
+            e.preventDefault();
+            movePointerRelative(state.selectedPointer, -1);
+          } else if (e.key === 'Delete' && state.selectedPointer) {
+            e.preventDefault();
+            deletePointer(state.selectedPointer);
           }
-        } else if (e.key === ']') {
-          e.preventDefault();
-          document.getElementById('btnStep')?.click();
-        } else if (e.key === '[') {
-          e.preventDefault();
-          document.getElementById('btnStepBack')?.click();
-        } else if (e.key === 'ArrowRight' && state.selectedPointer) {
-          movePointerRelative(state.selectedPointer, 1);
-        } else if (e.key === 'ArrowLeft' && state.selectedPointer) {
-          movePointerRelative(state.selectedPointer, -1);
-        } else if (e.key === 'Delete' && state.selectedPointer) {
-          deletePointer(state.selectedPointer);
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-          e.preventDefault(); undo();
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-          e.preventDefault(); redo();
         }
       });
 
@@ -4094,6 +4143,7 @@ for (let i = 0; i < n; i++) {
           state.arr = [...prev.arr];
           state.pointers = JSON.parse(JSON.stringify(prev.pointers));
           renderBoard();
+          renderPointerTray();
           logStep(`↩️ Undo: ${cur.desc || 'Action'}`);
         }
       }
@@ -4105,6 +4155,7 @@ for (let i = 0; i < n; i++) {
           state.arr = [...next.arr];
           state.pointers = JSON.parse(JSON.stringify(next.pointers));
           renderBoard();
+          renderPointerTray();
           logStep(`↪️ Redo: ${next.desc || 'Action'}`);
         }
       }
@@ -4296,7 +4347,7 @@ while (lp <= mid && rp < arr.length) {
 
       // Splitter Resizing: Horizontal (Canvas vs Bottom IDE)
       const resizerH = document.getElementById('resizerH');
-      const bottomDrawer = document.getElementById('bottomDrawer');
+      // bottomDrawer is already declared in the top DOM-elements block above.
       let isResizingH = false;
       let startH = 0, startY = 0;
 
