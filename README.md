@@ -129,6 +129,8 @@ Array-Lab is committed to global algorithmic literacy. Full localized documentat
 - 🇧🇩 **[বাংলা ডকুমেন্টেশন (Bengali Guide & Code)](languages/bn/README.md)**
 - 📘 **[User Guideline & Manual (English)](GUIDELINE.md)**
 - 📗 **[ব্যবহার নির্দেশিকা (Bengali Guideline)](languages/bn/GUIDELINE.md)**
+- 📋 **[Software Requirements Specification (SRS - English)](REQUIREMENTS.md)**
+- 📜 **[সফটওয়্যার রিকোয়ারমেন্টস স্পেসিফিকেশন (SRS - বাংলা)](languages/bn/REQUIREMENTS.md)**
 
 ---
 
